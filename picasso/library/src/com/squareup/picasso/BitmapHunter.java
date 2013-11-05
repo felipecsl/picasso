@@ -89,6 +89,9 @@ abstract class BitmapHunter implements Runnable {
     } catch (IOException e) {
       exception = e;
       dispatcher.dispatchRetry(this);
+    } catch (Exception e) {
+      exception = e;
+      dispatcher.dispatchFailed(this);
     } finally {
       Thread.currentThread().setName(Utils.THREAD_IDLE_NAME);
     }
@@ -112,7 +115,7 @@ abstract class BitmapHunter implements Runnable {
 
     if (bitmap != null) {
       stats.dispatchBitmapDecoded(bitmap);
-      if (data.needsTransformation()) {
+      if (data.needsTransformation() || exifRotation != 0) {
         synchronized (DECODE_LOCK) {
           if (data.needsMatrixTransform() || exifRotation != 0) {
             bitmap = transformResult(data, bitmap, exifRotation);
@@ -191,7 +194,7 @@ abstract class BitmapHunter implements Runnable {
         return new ContentProviderBitmapHunter(context, picasso, dispatcher, cache, stats, action);
       }
     } else if (SCHEME_FILE.equals(scheme)) {
-      if (ANDROID_ASSET.equals(uri.getPathSegments().get(0))) {
+      if (!uri.getPathSegments().isEmpty() && ANDROID_ASSET.equals(uri.getPathSegments().get(0))) {
         return new AssetBitmapHunter(context, picasso, dispatcher, cache, stats, action);
       }
       return new FileBitmapHunter(context, picasso, dispatcher, cache, stats, action);
